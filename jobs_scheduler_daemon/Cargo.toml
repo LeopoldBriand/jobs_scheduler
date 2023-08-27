@@ -1,0 +1,13 @@
+[package]
+name = "jobs_scheduler_daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+utils = { path = "../utils" }
+tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
+tokio-cron-scheduler = "0.9.4"
+shlex = "1.1.0"
+chrono = "0.4.26"
+crossbeam-channel = "0.5.8"
+ctrlc = "3.4.0"

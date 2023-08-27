@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "jobs_scheduler_client",
+    "jobs_scheduler_daemon",
+    "utils",
+]
