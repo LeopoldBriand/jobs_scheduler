@@ -1,4 +1,5 @@
 use chrono::Utc;
+use core::fmt;
 use shlex::Shlex;
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
@@ -19,24 +20,29 @@ async fn main() -> Result<(), JobSchedulerError> {
                 let timestamp = Utc::now().timestamp();
                 let mut lex = Shlex::new(&command);
                 let mut args = lex.by_ref().collect::<Vec<String>>();
-                let output = Command::new(args.remove(0))
-                    .args(args)
-                    .output()
-                    .unwrap_or_else(|_| panic!("Failed to execute process {}", name));
-                if output.status.success() {
-                    add_to_history(
-                        name.clone(),
-                        timestamp,
-                        "SUCCESS",
-                        std::str::from_utf8(&output.stderr).unwrap(),
-                    )
-                } else {
-                    add_to_history(
-                        name.clone(),
-                        timestamp,
-                        "ERROR",
-                        std::str::from_utf8(&output.stderr).unwrap(),
-                    )
+                match Command::new(args.remove(0)).args(args).output() {
+                    Ok(output) => {
+                        if output.status.success() {
+                            add_to_history(
+                                name.clone(),
+                                timestamp,
+                                "SUCCESS",
+                                std::str::from_utf8(&output.stderr).unwrap(),
+                            )
+                        } else {
+                            add_to_history(
+                                name.clone(),
+                                timestamp,
+                                "ERROR",
+                                std::str::from_utf8(&output.stderr).unwrap(),
+                            )
+                        }
+                        add_to_log(LogType::DEBUG, format!("Process {} executed", name))
+                    }
+                    Err(_) => add_to_log(
+                        LogType::ERROR,
+                        format!("Failed to execute process {}", name),
+                    ),
                 }
             })?)
             .await?;
@@ -49,13 +55,35 @@ async fn main() -> Result<(), JobSchedulerError> {
 
 fn add_to_history(name: String, timestamp: i64, status: &str, error_message: &str) {
     let line = name + "," + &timestamp.to_string() + "," + status + "," + error_message;
-    let mut file = OpenOptions::new()
+    match OpenOptions::new()
         .write(true)
         .append(true)
         .open("./history")
-        .unwrap();
-
-    if let Err(e) = writeln!(file, "{}", line) {
-        eprintln!("Couldn't write to file: {}", e);
+    {
+        Ok(mut file) => {
+            if let Err(e) = writeln!(file, "{}", line) {
+                add_to_log(LogType::ERROR, format!("Couldn't write to file: {}", e));
+            }
+        }
+        Err(_) => add_to_log(LogType::ERROR, format!("Couldn't open file:")),
     }
+}
+
+enum LogType {
+    DEBUG,
+    ERROR,
+}
+
+impl fmt::Display for LogType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            LogType::DEBUG => write!(f, "DEBUG"),
+            LogType::ERROR => write!(f, "ERROR"),
+        }
+    }
+}
+
+fn add_to_log(log_type: LogType, text: String) {
+    // TODO: write to log file
+    println!("{}: {}", log_type, text);
 }
