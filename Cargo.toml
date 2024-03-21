@@ -4,3 +4,4 @@ members = [
     "jobs_scheduler_daemon",
     "utils",
 ]
+resolver = "2"
