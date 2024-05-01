@@ -60,6 +60,9 @@ impl App {
         }
     }
     pub fn get_selected_job(&self) -> Option<(String, String, String)> {
+        if self.jobs.items.len() == 0 {
+            return None;
+        }
         self.jobs
             .state
             .selected()

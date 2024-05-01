@@ -147,7 +147,11 @@ where
             InputMode::Editing => Style::default().fg(Color::Yellow),
             InputMode::Error => Style::default().fg(Color::Red),
         })
-        .block(Block::default().borders(Borders::ALL).title("Cron"));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Cron & Command"),
+        );
 
     // Render widgets
     f.render_widget(name_input, input_chunks[0]);

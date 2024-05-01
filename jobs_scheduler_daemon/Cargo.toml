@@ -9,6 +9,4 @@ tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 tokio-cron-scheduler = "0.9.4"
 shlex = "1.1.0"
 chrono = "0.4.26"
-crossbeam-channel = "0.5.8"
-ctrlc = "3.4.0"
 directories = "5.0"

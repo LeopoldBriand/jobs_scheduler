@@ -1,5 +1,6 @@
 use std::fs;
 
+use directories::UserDirs;
 use ratatui::widgets::ListState;
 use utils::parse_job;
 
@@ -142,12 +143,17 @@ impl App {
         }
     }
     fn write_jobs(&self) {
+        let jobs_file = UserDirs::new()
+            .unwrap()
+            .home_dir()
+            .join("job_scheduler")
+            .join("jobs");
         let content: Vec<String> = self
             .jobs
             .items
             .iter()
             .map(|el| format!("{}: {} {}", el.0, el.1, el.2))
             .collect();
-        fs::write("./jobs", content.join("\n")).unwrap();
+        fs::write(jobs_file, content.join("\n")).unwrap();
     }
 }
