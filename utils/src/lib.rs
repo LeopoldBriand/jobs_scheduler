@@ -17,7 +17,22 @@ pub struct HistoryStatement {
     pub error_message: String,
 }
 
-pub type Job = (String, String, String);
+#[derive(Debug, Clone)]
+pub struct Job {
+    pub name: String,
+    pub cron: String,
+    pub command: String,
+}
+
+impl Job {
+    pub fn new(name: String, cron: String, command: String) -> Job {
+        Job {
+            name,
+            cron,
+            command,
+        }
+    }
+}
 
 pub fn parse_history(file_content: String) -> History {
     let mut reader = csv::ReaderBuilder::new()
@@ -42,7 +57,11 @@ pub fn parse_jobs(file_content: String) -> Vec<Job> {
     let mut jobs = vec![];
     for line in file_content.lines() {
         for (_, [name, cron, command]) in regex.captures_iter(line).map(|c| c.extract()) {
-            jobs.push((name.to_owned(), cron.to_owned(), command.to_owned()));
+            jobs.push(Job::new(
+                name.to_owned(),
+                cron.to_owned(),
+                command.to_owned(),
+            ));
         }
     }
     jobs
@@ -50,7 +69,7 @@ pub fn parse_jobs(file_content: String) -> Vec<Job> {
 pub fn parse_job(content: String) -> Option<Job> {
     let regex = Regex::new(JOB_REGEX).unwrap();
     regex.captures(&content).map(|caps| {
-        (
+        Job::new(
             caps[1].to_string(),
             caps[2].to_string(),
             caps[3].to_string(),

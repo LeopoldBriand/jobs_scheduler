@@ -152,7 +152,7 @@ impl App {
             .jobs
             .items
             .iter()
-            .map(|el| format!("{}: {} {}", el.0, el.1, el.2))
+            .map(|el| format!("{}: {} {}", el.name, el.cron, el.command))
             .collect();
         fs::write(jobs_file, content.join("\n")).unwrap();
     }

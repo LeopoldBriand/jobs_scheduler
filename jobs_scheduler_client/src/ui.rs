@@ -54,7 +54,7 @@ where
         .items
         .iter()
         .map(|i| {
-            let lines = vec![Line::from(i.0.clone())];
+            let lines = vec![Line::from(i.name.clone())];
             ListItem::new(lines).style(Style::default().fg(Color::White))
         })
         .collect();
@@ -84,7 +84,7 @@ where
         .rev()
         .filter(|history_line| {
             if let Some(job) = app.get_selected_job() {
-                history_line.name == job.0
+                history_line.name == job.name
             } else {
                 false
             }

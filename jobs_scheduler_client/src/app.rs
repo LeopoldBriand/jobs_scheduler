@@ -59,7 +59,7 @@ impl App {
             current_state: State::NotEditing,
         }
     }
-    pub fn get_selected_job(&self) -> Option<(String, String, String)> {
+    pub fn get_selected_job(&self) -> Option<Job> {
         if self.jobs.items.len() == 0 {
             return None;
         }
@@ -70,7 +70,7 @@ impl App {
     }
     pub fn get_selected_job_as_strings(&self) -> (String, String) {
         match self.get_selected_job() {
-            Some(item) => (item.0.to_owned(), item.1 + " " + &item.2),
+            Some(job) => (job.name.to_owned(), job.cron + " " + &job.command),
             None => (String::new(), String::new()),
         }
     }
