@@ -1,17 +1,14 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use core::fmt;
 use directories::UserDirs;
-use shlex::Shlex;
 use std::fs::{self, OpenOptions};
-use std::io::prelude::*;
+use std::io::{self, prelude::*};
 use std::path::Path;
 use std::process::Command;
-use std::time::Duration;
-use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 use utils::parse_jobs;
 
 #[tokio::main]
-async fn main() -> Result<(), JobSchedulerError> {
+async fn main() {
     let js_dir = UserDirs::new().unwrap().home_dir().join("job_scheduler");
     let log_file = js_dir.join("logs");
     let history_file = js_dir.join("history");
@@ -27,7 +24,7 @@ async fn main() -> Result<(), JobSchedulerError> {
         std::fs::File::create(history_file.clone())
             .expect("Not allowed to create ~/job_scheduler/history file");
     }
-    let jobs = match jobs_file.exists() {
+    let mut jobs = match jobs_file.exists() {
         true => match fs::read_to_string(jobs_file) {
             Ok(jobs_content) => parse_jobs(jobs_content),
             Err(_) => {
@@ -47,56 +44,39 @@ async fn main() -> Result<(), JobSchedulerError> {
         }
     };
 
-    let scheduler = JobScheduler::new().await?;
-    for (name, cron, command) in jobs {
-        scheduler
-            .add(Job::new(cron.as_str(), move |_uuid, _l| {
-                let history_file = UserDirs::new()
-                    .unwrap()
-                    .home_dir()
-                    .join("job_scheduler")
-                    .join("history");
-                let timestamp = Utc::now().timestamp();
-                let mut lex = Shlex::new(&command);
-                let mut args = lex.by_ref().collect::<Vec<String>>();
-                match Command::new(args.remove(0)).args(args).output() {
-                    Ok(output) => {
-                        if output.status.success() {
-                            add_to_history(
-                                name.clone(),
-                                timestamp,
-                                "SUCCESS",
-                                std::str::from_utf8(&output.stderr).unwrap(),
-                                &history_file,
-                            )
-                        } else {
-                            add_to_history(
-                                name.clone(),
-                                timestamp,
-                                "ERROR",
-                                std::str::from_utf8(&output.stderr).unwrap(),
-                                &history_file,
-                            )
-                        }
-                        add_to_log(LogType::DEBUG, format!("Process {} executed", name))
-                    }
-                    Err(_) => add_to_log(
-                        LogType::ERROR,
-                        format!("Failed to execute process {}", name),
-                    ),
-                }
-            })?)
-            .await?;
-    }
-    scheduler.start().await?;
+    jobs.sort_by_key(|j| j.next_run);
+
     loop {
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        let time_to_wait = Utc::now() - jobs[0].next_run;
+        tokio::time::sleep(time_to_wait.to_std().unwrap()).await;
+        match Command::new(jobs[0].command.clone()).spawn() {
+            Ok(child) => {
+                if let Some(child_stderr) = child.stderr {
+                    let mut stderr_reader = io::BufReader::new(child_stderr);
+                    let mut error_message = String::new();
+                    stderr_reader.read_to_string(&mut error_message).unwrap();
+
+                    add_to_history(
+                        jobs[0].name.clone(),
+                        Utc::now(),
+                        "Error",
+                        &error_message,
+                        &history_file,
+                    );
+                } else {
+                    add_to_history(jobs[0].name.clone(), Utc::now(), "Ok", "", &history_file);
+                }
+            }
+            Err(err) => add_to_log(LogType::ERROR, err.to_string()),
+        }
+        jobs[0].get_next_run();
+        jobs.sort_by_key(|j| j.next_run);
     }
 }
 
 fn add_to_history(
     name: String,
-    timestamp: i64,
+    timestamp: DateTime<Utc>,
     status: &str,
     error_message: &str,
     history_file: &Path,

@@ -27,17 +27,23 @@ pub struct Job {
     pub name: String,
     pub cron: String,
     pub command: String,
-    pub next_run: Option<DateTime<Utc>>,
+    pub next_run: DateTime<Utc>,
 }
 
 impl Job {
     pub fn new(name: String, cron: String, command: String) -> Job {
         Job {
             name,
+            next_run: get_next_run(&cron),
             cron,
             command,
-            next_run: None,
         }
+    }
+}
+
+impl Job {
+    pub fn get_next_run(&mut self) {
+        self.next_run = get_next_run(&self.cron)
     }
 }
 
