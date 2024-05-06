@@ -5,10 +5,10 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, prelude::*};
 use std::path::Path;
 use std::process::Command;
+use std::thread;
 use utils::parse_jobs;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let js_dir = UserDirs::new().unwrap().home_dir().join("job_scheduler");
     let log_file = js_dir.join("logs");
     let history_file = js_dir.join("history");
@@ -48,7 +48,7 @@ async fn main() {
 
     loop {
         let time_to_wait = Utc::now() - jobs[0].next_run;
-        tokio::time::sleep(time_to_wait.to_std().unwrap()).await;
+        thread::sleep(time_to_wait.to_std().unwrap());
         match Command::new(jobs[0].command.clone()).spawn() {
             Ok(child) => {
                 if let Some(child_stderr) = child.stderr {
