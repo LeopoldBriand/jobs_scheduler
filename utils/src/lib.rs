@@ -96,7 +96,12 @@ pub fn get_next_run(cron: &str) -> DateTime<Utc> {
 
 pub fn get_next_run_from(start: DateTime<Utc>, cron: &str) -> DateTime<Utc> {
     let fields = parser::parse(cron);
-    let mut current_date = start.clone();
+    let mut current_date = start
+        .clone()
+        .with_minute(start.minute() + 1)
+        .unwrap()
+        .with_second(0)
+        .unwrap();
     let mut step_count: u32 = 0;
     let days_in_month = vec![31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     while step_count < LOOP_LIMIT {
@@ -170,5 +175,17 @@ mod tests {
         let start = Utc.with_ymd_and_hms(2024, 05, 1, 0, 0, 0).unwrap();
         let date = get_next_run_from(start, "5 4 * * 6");
         assert_eq!(date.to_string(), "2024-05-05 04:05:00 UTC");
+    }
+    #[test]
+    fn every_minutes() {
+        let start = Utc.with_ymd_and_hms(2024, 05, 1, 1, 1, 20).unwrap();
+        let date = get_next_run_from(start, "* * * * *");
+        assert_eq!(date.to_string(), "2024-05-01 01:02:00 UTC");
+    }
+    #[test]
+    fn at_minutes_two() {
+        let start = Utc.with_ymd_and_hms(2024, 05, 1, 1, 0, 20).unwrap();
+        let date = get_next_run_from(start, "2 * * * *");
+        assert_eq!(date.to_string(), "2024-05-01 01:02:00 UTC");
     }
 }

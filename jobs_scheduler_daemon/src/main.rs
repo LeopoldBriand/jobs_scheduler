@@ -14,7 +14,7 @@ fn main() {
     let history_file = js_dir.join("history");
     let jobs_file = js_dir.join("jobs");
     // Check if files exists else create
-    if !js_dir.join("logs").exists() {
+    if !log_file.exists() {
         fs::create_dir_all(js_dir).expect("Not allowed to create ~/job_scheduler folder");
         std::fs::File::create(log_file).expect("Not allowed to create ~/job_scheduler/logs file");
     } else {
@@ -45,11 +45,20 @@ fn main() {
     };
 
     jobs.sort_by_key(|j| j.next_run);
-
+    println!("There are {} jobs in the queue", jobs.len());
     loop {
         let time_to_wait = Utc::now() - jobs[0].next_run;
+        println!(
+            "next job is {} and will be run in {}",
+            jobs[0].name,
+            time_to_wait.to_string()
+        );
         thread::sleep(time_to_wait.to_std().unwrap());
-        match Command::new(jobs[0].command.clone()).spawn() {
+        let string_command = jobs[0].command.clone();
+        let mut parts = string_command.split_whitespace();
+        let command = parts.next().expect("No command provided");
+        let args: Vec<&str> = parts.collect();
+        match Command::new(command).args(args).spawn() {
             Ok(child) => {
                 if let Some(child_stderr) = child.stderr {
                     let mut stderr_reader = io::BufReader::new(child_stderr);
